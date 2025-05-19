@@ -50,4 +50,9 @@ class Kernel extends Command
             $controller->processOverduePayments();
         })->weekly()->mondays()->at('10:00');
     }
+
+    protected $commands = [
+        // ... other commands
+        \App\Console\Commands\ProcessRentRemindersCommand::class, // Add this line
+    ];
 }
