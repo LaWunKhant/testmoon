@@ -22,7 +22,7 @@ class HouseSeeder extends Seeder
                 'owner_id' => $user->id,
             ]);
         }
-        // You can 확장 this to create multiple houses with different owners
+        // You can  this to create multiple houses with different owners
         //  $users = User::all();
         //   foreach ($users as $user) {
         //       House::factory()->count(2)->create([  //creates 2 houses for each user

@@ -7,6 +7,8 @@ use App\Http\Controllers\HouseController;
 use App\Http\Controllers\MaintenanceRequestController; // Ensure this class exists in the specified namespace
 use App\Http\Controllers\RentPaymentController;
 use App\Http\Controllers\TenantController;
+use App\Mail\TestMail;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
 // Route for the dashboard
@@ -29,6 +31,10 @@ Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('tenant
 Route::get('/tenants/{tenant}/edit', [TenantController::class, 'edit'])->name('tenants.edit');
 Route::put('/tenants/{tenant}', [TenantController::class, 'update'])->name('tenants.update');
 Route::delete('/tenants/{tenant}', [TenantController::class, 'destroy'])->name('tenants.destroy');
+
+Route::middleware('api')->group(function () {
+    Route::resource('tenants', TenantController::class);
+});
 
 // Routes for rent payments
 Route::get('/rent-payments', [RentPaymentController::class, 'index'])->name('rent_payments.index');
@@ -56,3 +62,10 @@ Route::get('/bills/{bill}', [BillController::class, 'show'])->name('bills.show')
 Route::get('/bills/{bill}/edit', [BillController::class, 'edit'])->name('bills.edit');
 Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.update');
 Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
+
+Route::get('/send-test-email', function () {
+    $name = 'Test User'; // Or any name you want to use
+    Mail::to('test@example.com')->send(new TestMail($name, 'Blah blah blah'));
+
+    return 'Test email sent!';
+});

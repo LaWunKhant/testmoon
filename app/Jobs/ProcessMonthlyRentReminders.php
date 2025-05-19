@@ -10,10 +10,11 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Mail; // Import DB class for transactions
 
-class ProcessMonthlyRentReminders implements ShouldQueue // Added implements ShouldQueue
+class ProcessMonthlyRentReminders implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -24,7 +25,7 @@ class ProcessMonthlyRentReminders implements ShouldQueue // Added implements Sho
      *
      * @return void
      */
-    public function __construct(House $house)  // Look here:  It expects a House object.
+    public function __construct(House $house)
     {
         $this->house = $house;
     }
@@ -43,24 +44,28 @@ class ProcessMonthlyRentReminders implements ShouldQueue // Added implements Sho
             // Get tenants for the house
             $tenants = $this->house->tenants;
 
-            foreach ($tenants as $tenant) {
-                // Create RentPayment
-                $rentPayment = new RentPayment;
-                $rentPayment->tenant_id = $tenant->id;
-                $rentPayment->due_date = now()->addMonth();
-                $rentPayment->amount = $tenant->rent;
-                $rentPayment->save();
-                Log::info("Rent payment created for tenant {$tenant->id}");
-                // send reminder
-                Mail::to($tenant->email)->send(new RentReminderMail($tenant, $rentPayment));
-                Log::info("Rent reminder sent to tenant {$tenant->id}");
-            }
+            // Use a database transaction for atomicity
+            DB::transaction(function () use ($tenants) {
+                foreach ($tenants as $tenant) {
+                    // Create RentPayment
+                    $rentPayment = new RentPayment;
+                    $rentPayment->tenant_id = $tenant->id;
+                    $rentPayment->due_date = now()->addMonth();
+                    $rentPayment->amount = $tenant->rent; // Ensure this is not null
+                    $rentPayment->save();
+                    Log::info("Rent payment created for tenant {$tenant->id}, amount: {$rentPayment->amount}");
+
+                    // send reminder
+                    Mail::to($tenant->email)->send(new RentReminderMail($tenant, $rentPayment));
+                    Log::info("Rent reminder sent to tenant {$tenant->id}");
+                }
+            });
 
         } catch (\Exception $e) {
             // Log the error
             Log::error('Error processing rent reminders for house: '.$this->house->id.' - '.$e->getMessage());
-            // Optionally, you can decide whether to retry the job or not.
-            //  $this->fail($e); // This will mark the job as failed in the queue.
+            //  Re-throw the exception to mark the job as failed
+            throw $e;
         }
     }
 }
