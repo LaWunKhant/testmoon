@@ -20,11 +20,8 @@ class MaintenanceRequestController extends Controller
         // Fetch all maintenance requests, ordered by creation date
         $maintenanceRequests = MaintenanceRequest::orderBy('created_at', 'desc')->get();
 
-        // Return them as a JSON response
-        return response()->json($maintenanceRequests);
-
-        // If you were returning a view, it would look something like this:
-        // return view('maintenance_requests.index', compact('maintenanceRequests'));
+        // Return a view and pass the data to it
+        return view('maintenance_requests.index', compact('maintenanceRequests'));
     }
 
     public function store(Request $request)
