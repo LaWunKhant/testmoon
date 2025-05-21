@@ -47,6 +47,10 @@ Route::get('/rent-payments/{rent_payment}', [RentPaymentController::class, 'show
 Route::get('/rent-payments/{rent_payment}/edit', [RentPaymentController::class, 'edit'])->name('rent_payments.edit');
 Route::put('/rent-payments/{rent_payment}', [RentPaymentController::class, 'update'])->name('rent_payments.update');
 Route::delete('/rent-payments/{rent_payment}', [RentPaymentController::class, 'destroy'])->name('rent_payments.destroy');
+// Routes for payments
+
+Route::get('/payments/create', [PaymentController::class, 'create'])->name('payments.create');
+Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
 
 // Routes for maintenance requests
 Route::get('/maintenance-requests', [MaintenanceRequestController::class, 'index'])->name('maintenance_requests.index');
