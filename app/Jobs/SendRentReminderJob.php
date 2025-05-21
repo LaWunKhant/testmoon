@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Mail\RentReminderMail;
+use App\Mail\RentReminderEmail;
 use App\Models\RentPayment;
 use App\Models\Tenant;
 use Illuminate\Bus\Queueable;
@@ -28,8 +28,8 @@ class SendRentReminderJob implements ShouldQueue
 
     public function handle()
     {
-        // Send email reminder
-        Mail::to($this->tenant->email)->send(new RentReminderMail($this->tenant, $this->rentPayment));
+        Mail::to($this->tenant->email)->send(new \App\Mail\RentReminderEmail($this->tenant, $this->rentPayment));
+        Mail::to($this->tenant->email)->send(new RentReminderEmail($this->tenant, $this->rentPayment));
 
         // Log that reminder was sent
         \Log::info("Rent reminder sent to tenant: {$this->tenant->name} for payment due on {$this->rentPayment->due_date}");

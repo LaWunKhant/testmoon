@@ -13,11 +13,15 @@ class CreateMaintenanceRequestsTable extends Migration
     {
         Schema::create('maintenance_requests', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('house_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('house_id');
+            $table->unsignedBigInteger('tenant_id'); // Add this line
             $table->text('description');
-            $table->string('status')->default('pending'); // e.g., pending, scheduled, in_progress, completed
-            $table->date('scheduled_date')->nullable();
+            $table->string('status')->default('pending');
+            $table->dateTime('scheduled_date')->nullable();
             $table->timestamps();
+
+            $table->foreign('house_id')->references('id')->on('houses')->onDelete('cascade');
+            $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade'); // Add this line
         });
     }
 

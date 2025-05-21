@@ -3,21 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class RentPayment extends Model
 {
-    use HasFactory;
-    
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
-    protected $fillable = [
-        'amount',
-        'payment_date',
-        'tenant_id',
-        'status'
-    ];
+    // protected $fillable = [
+    //     'tenant_id',
+    //     'due_date',
+    //     'amount',
+    //     'paid',
+    // ];
+
+    protected $guarded = ['id'];
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 }

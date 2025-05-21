@@ -3,12 +3,15 @@
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HouseController;
-// Ensure this class exists in the specified namespace
-use App\Http\Controllers\MaintenanceRequestController; // Ensure this class exists in the specified namespace
+use App\Http\Controllers\MaintenanceRequestController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PaymentReminderController;
 use App\Http\Controllers\RentPaymentController;
 use App\Http\Controllers\TenantController;
-use App\Mail\TestMail;
-use Illuminate\Support\Facades\Mail;
+// Corrected use statement
+use App\Jobs\SendRentReminderJob;
+use App\Models\RentPayment;
+use App\Models\Tenant;
 use Illuminate\Support\Facades\Route;
 
 // Route for the dashboard
@@ -46,15 +49,15 @@ Route::put('/rent-payments/{rent_payment}', [RentPaymentController::class, 'upda
 Route::delete('/rent-payments/{rent_payment}', [RentPaymentController::class, 'destroy'])->name('rent_payments.destroy');
 
 // Routes for maintenance requests
-Route::get('/maintenance-requests', [MaintenanceRequestController::class, 'index'])->name('maintenance_requests.index'); // Ensure MaintenanceRequestController has an 'index' method
+Route::get('/maintenance-requests', [MaintenanceRequestController::class, 'index'])->name('maintenance_requests.index');
 Route::get('/maintenance-requests/create', [MaintenanceRequestController::class, 'create'])->name('maintenance_requests.create');
 Route::post('/maintenance-requests', [MaintenanceRequestController::class, 'store'])->name('maintenance_requests.store');
 Route::get('/maintenance-requests/{maintenance_request}', [MaintenanceRequestController::class, 'show'])->name('maintenance_requests.show');
 Route::get('/maintenance-requests/{maintenance_request}/edit', [MaintenanceRequestController::class, 'edit'])->name('maintenance_requests.edit');
 Route::put('/maintenance-requests/{maintenance_request}', [MaintenanceRequestController::class, 'update'])->name('maintenance_requests.update');
-Route::delete('/maintenance-requests/{maintenance_request}', [MaintenanceRequestController::class, 'destroy'])->name('maintenance_requests.destroy');
+Route::delete('/maintenance_requests/{maintenance_request}', [MaintenanceRequestController::class, 'destroy'])->name('maintenance_requests.destroy');
 
-// Routes for bills (if you have them)
+// Routes for bills
 Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
 Route::get('/bills/create', [BillController::class, 'create'])->name('bills.create');
 Route::post('/bills', [BillController::class, 'store'])->name('bills.store');
@@ -63,9 +66,42 @@ Route::get('/bills/{bill}/edit', [BillController::class, 'edit'])->name('bills.e
 Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.update');
 Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
 
+// Test email route
 Route::get('/send-test-email', function () {
-    $name = 'Test User'; // Or any name you want to use
-    Mail::to('test@example.com')->send(new TestMail($name, 'Blah blah blah'));
+    // Try to find an existing tenant with the test email.
+    $tenant = Tenant::where('email', 'test@example.com')->first();
 
-    return 'Test email sent!';
+    // If the tenant doesn't exist, create them.
+    if (! $tenant) {
+        $tenant = Tenant::factory()->create(['name' => 'Test Tenant', 'email' => 'test@example.com']);
+    }
+
+    // Create a dummy rent payment.
+    $rentPayment = RentPayment::factory()->create(['tenant_id' => $tenant->id, 'amount' => 123.45, 'due_date' => now()->addDays(7)]);
+
+    // Dispatch the job directly.
+    dispatch(new SendRentReminderJob($tenant, $rentPayment));
+
+    return 'Rent reminder job dispatched! Check your Mailtrap inbox.';
 });
+
+// Route to trigger monthly rent reminder job
+Route::get('/dispatch-monthly-reminders-job', function () {
+    // Get a House instance to pass to the job.
+    // You'll need to adjust this to get the specific house you want.
+    // For example, you might fetch the first house, or a house with a specific ID.
+    $house = \App\Models\House::first(); // Or use a more specific query, like ->find(1)
+
+    if ($house) {
+        \App\Jobs\ProcessMonthlyRentReminders::dispatch($house);
+
+        return 'Monthly rent reminder job dispatched for house: '.$house->id;
+    } else {
+        return 'No houses found to dispatch the monthly rent reminder job!';
+    }
+});
+
+// Route for overdue payment reminders
+Route::get('/send-overdue-reminders', [PaymentReminderController::class, 'sendOverdueReminders']);
+
+Route::patch('/payments/{id}/status', [PaymentController::class, 'updatePaymentStatus']);

@@ -6,7 +6,6 @@ use App\Models\House;
 use App\Models\Tenant;
 use Faker\Factory;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class TenantSeeder extends Seeder
 {
@@ -25,12 +24,9 @@ class TenantSeeder extends Seeder
         }
 
         for ($i = 0; $i < 10; $i++) {
-            $tenant = new Tenant;
-            $tenant->name = Str::random(10);
-            $tenant->email = Str::random(10).'@example.com';
+            $tenant = Tenant::factory()->make();
             $tenant->phone = $faker->phoneNumber();
             $tenant->house_id = $faker->randomElement($houseIds);
-            $tenant->rent = $faker->numberBetween(500, 2000);
             $tenant->save();
         }
     }

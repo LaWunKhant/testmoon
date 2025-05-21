@@ -59,7 +59,7 @@
         <div class="payment-details">
             <p><strong>Property Address:</strong> {{ $propertyAddress }}</p>
             <p><strong>Amount Due:</strong> ${{ number_format($amount, 2) }}</p>
-            <p><strong>Due Date:</strong> <span class="important">{{ $dueDate }}</span></p>
+            <p><strong>Due Date:</strong> {{ $rentPayment->due_date->format('F j, Y') }}</p>
         </div>
         
         <p>Please ensure your payment is made on or before the due date to avoid late fees. If you have already made this payment, please disregard this notice.</p>

@@ -15,10 +15,13 @@ class DatabaseSeeder extends Seeder
         //     'name' => 'John Doe',
         // ]);
 
-        $this->call(UserSeeder::class);
-        $this->call(HouseSeeder::class);
-        $this->call(TenantSeeder::class);
-
+        $this->call([
+            UserSeeder::class,
+            HouseSeeder::class,
+            TenantSeeder::class,
+            MaintenanceRequestSeeder::class, // Add this line
+            // Add other seeders here
+        ]);
         // \App\Models\House::factory(5)->create([
         // ]);
 

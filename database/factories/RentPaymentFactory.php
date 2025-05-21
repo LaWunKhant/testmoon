@@ -7,18 +7,26 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class RentPaymentFactory extends Factory
 {
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
     protected $model = RentPayment::class;
 
+    /**
+     * Define the model's default state.
+     *
+     * @return array
+     */
     public function definition()
     {
         return [
-            'tenant_id' => $this->faker->randomNumber(),
+            'tenant_id' => \App\Models\Tenant::factory(), // Ensure Tenant factory exists and is correct
             'due_date' => $this->faker->dateTimeBetween('now', '+1 month'),
-            'amount' => $this->faker->randomFloat(2, 100, 1000),
-            'paid' => $this->faker->boolean(),
-            'description' => $this->faker->optional()->sentence(),
-            'reminder_sent' => $this->faker->boolean(20), // 20% chance of being true
-            'reminder_sent_at' => $this->faker->optional(0.2)->dateTimeBetween('-1 week', 'now'), // Only set if reminder was sent
+            'amount' => $this->faker->randomFloat(2, 50, 1000),
+            'paid' => $this->faker->boolean, // Or set a default value if needed
+            // Add any other fields your RentPayment model has
         ];
     }
 }
