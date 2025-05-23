@@ -3,13 +3,14 @@
 namespace App\Console;
 
 // --- Add necessary Use statements here at the top, correctly ---
+// *** Import your new command ***
 use App\Http\Controllers\ReminderController; // For existing call schedules
 use App\Jobs\GenerateMonthlyReportJob;      // For your job schedule
-use Exception; // For defining schedules
-use Illuminate\Console\Scheduling\Schedule; // For extending the base Kernel
-use Illuminate\Foundation\Console\Kernel as ConsoleKernel; // For database transactions in the closure
-use Illuminate\Support\Facades\DB; // For logging in the closure
-use Illuminate\Support\Facades\Log; // For catching exceptions in the closure
+use Exception; // For catching exceptions in closures
+use Illuminate\Console\Scheduling\Schedule; // For defining schedules
+use Illuminate\Foundation\Console\Kernel as ConsoleKernel; // For extending the base Kernel
+use Illuminate\Support\Facades\DB; // For database transactions in the closure
+use Illuminate\Support\Facades\Log; // For logging in closures
 
 // --- End Use statements ---
 
@@ -23,6 +24,8 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         // Add any custom commands you have here, e.g.:
         \App\Console\Commands\ProcessRentRemindersCommand::class,
+        // *** Ensure your new command is listed here ***
+        \App\Console\Commands\SendOverdueRemindersCommand::class,
         // If the 'app:kernel' command you showed is a separate command you want to keep, list it here too:
         // \App\Console\Commands\Kernel::class, // Assuming your custom command is in app/Console/Commands/Kernel.php
     ];
@@ -32,7 +35,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // --- Your existing schedules moved from the custom command ---
+        // --- Your existing schedules ---
         // Send rent reminders on the 25th of each month
         $schedule->call(function () {
             $controller = app()->make(ReminderController::class);
@@ -50,44 +53,42 @@ class Kernel extends ConsoleKernel
             $controller = app()->make(ReminderController::class);
             $controller->processOverduePayments();
         })->weekly()->mondays()->at('10:00');
-        // --- End of your existing schedules ---
+        // --- End of existing schedules ---
 
-        // --- Your new monthly report job schedule, using ->call with explicit transaction ---
+        // --- Your monthly report job schedule (using ->call with explicit transaction) ---
         // Schedule the GenerateMonthlyReportJob to run monthly, ensuring transaction commit
         $schedule->call(function () {
-            // --- No Use statements needed inside the closure ---
-            // The Use statements at the top cover these classes
+            // Use Use statements at the top
+            Log::info('Scheduled GenerateMonthlyReportJob task started.');
 
-            Log::info('Scheduled GenerateMonthlyReportJob task started.'); // Log at the very start of this scheduled task
-
-            DB::beginTransaction(); // Start a manual database transaction
+            DB::beginTransaction();
             try {
-                // Dispatch the job within the transaction
                 Log::info('Attempting to dispatch GenerateMonthlyReportJob within transaction (scheduled task)...');
-                GenerateMonthlyReportJob::dispatch(); // Dispatch the job
+                GenerateMonthlyReportJob::dispatch();
                 Log::info('Dispatch call completed within transaction (scheduled task).');
-
-                DB::commit(); // Commit the transaction to save the job to the 'jobs' table
+                DB::commit();
                 Log::info('Transaction committed. Job should be in the queue.');
-
-            } catch (Exception $e) { // Catch Exception class
-                // Rollback the transaction if an error occurs during dispatch
+            } catch (Exception $e) {
                 DB::rollBack();
                 Log::error('GenerateMonthlyReportJob dispatch failed and rolled back from scheduled task: '.$e->getMessage());
-                // Optionally re-throw the exception if you want Laravel's scheduler to mark the task as failed
-                // throw $e;
             }
-
-            Log::info('Scheduled GenerateMonthlyReportJob task finished.'); // Log at the very end of this scheduled task
+            Log::info('Scheduled GenerateMonthlyReportJob task finished.');
 
             // Temporarily set to everyMinute() for testing, change back to monthly() or monthlyOn() later
-        })->everyMinute(); // <--- Set to everyMinute() for testing
+        })->everyMinute(); // <--- Monthly Report Job: Set to everyMinute() for testing
 
-        // Example for running at a specific time on the first day of the month:
-        // ->monthlyOn(1, '3:00'); // Change ->everyMinute() to this for actual monthly scheduling
+        // --- Schedule your new Overdue Payment Reminders Command ---
+        // Schedule the Artisan command that sends overdue reminders
+        $schedule->command('app:send-overdue-reminders')
+            ->everyMinute(); // *** ADD THIS LINE, set to everyMinute() for testing ***
+
+        // Example for running daily at 9:30 AM:
+        // $schedule->command('app:send-overdue-reminders')->daily()->at('9:30');
+
+        // Example to run weekly on Mondays at 10:00 AM:
+        // $schedule->command('app:send-overdue-reminders')->weekly()->mondays()->at('10:00');
 
         // You might also chain methods like ->withoutOverlapping() if you don't want it to run if a previous instance is still going
-        // ->onConnection('database') // Optional: Explicitly set connection if needed, but default should work based on .env
     }
 
     /**

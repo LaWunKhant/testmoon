@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 Schedule::command('inspire')
     ->everyMinute();
+
+Schedule::command('app:send-overdue-reminders')
+    ->everyMinute();
