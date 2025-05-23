@@ -3,7 +3,7 @@
 <head>
     <title>Record Payment</title>
     <style>
-        /* Basic styling for readability */
+        /* Add some basic CSS for the form */
         body { font-family: sans-serif; }
         form { margin-top: 20px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
@@ -82,7 +82,7 @@
                 <option value="">Select Tenant</option>
                 @foreach ($tenants as $tenant)
                     <option value="{{ $tenant->id }}" {{ old('tenant_id') == $tenant->id ? 'selected' : '' }}>
-                        {{ $tenant->name }} {{-- Assuming Tenant model has a 'name' attribute --}}
+                        {{ $tenant->name ?? 'N/A' }} {{-- Assuming Tenant model has a 'name' attribute --}}
                     </option>
                 @endforeach
             </select>
@@ -95,7 +95,7 @@
                  <option value="">Select House</option>
                 @foreach ($houses as $house)
                     <option value="{{ $house->id }}" {{ old('house_id') == $house->id ? 'selected' : '' }}>
-                         {{ $house->address }} {{-- Assuming House model has an 'address' attribute or similar --}}
+                         {{ $house->address ?? 'N/A' }} {{-- Assuming House model has an 'address' attribute or similar --}}
                     </option>
                 @endforeach
             </select>
@@ -123,7 +123,7 @@
         <div>
             <label for="reference">Reference:</label>
             <input type="text" name="reference" id="reference" value="{{ old('reference') }}">
-            @error('reference') <span class="error">{{ $message }}</span> @enderror 
+            @error('reference') <span class="error">{{ $message }}</span> @enderror
         </div>
 
         <div>

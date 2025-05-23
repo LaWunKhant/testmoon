@@ -2,9 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\House;
 use App\Models\Payment;
-use App\Models\Tenant;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Bus\Queueable;
@@ -13,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail; // Import the Mail facade
 
 class GenerateMonthlyReportJob implements ShouldQueue
 {
@@ -23,7 +22,6 @@ class GenerateMonthlyReportJob implements ShouldQueue
      */
     public function __construct()
     {
-        // Add logging in the constructor
         Log::info('GenerateMonthlyReportJob: Constructor called.');
     }
 
@@ -32,11 +30,9 @@ class GenerateMonthlyReportJob implements ShouldQueue
      */
     public function handle(): void
     {
-        // Add logging right before the try block
         Log::info('GenerateMonthlyReportJob: About to enter try block in handle method.');
 
         try {
-            // Log at the very beginning of the try block
             Log::info('GenerateMonthlyReportJob: Handle method started inside try block.');
 
             // 1. Determine the report period (previous month)
@@ -69,7 +65,6 @@ class GenerateMonthlyReportJob implements ShouldQueue
             if ($numberOfPayments > 0) {
                 $reportContent .= "Individual Payments:\n";
                 foreach ($lastMonthPayments as $payment) {
-                    // Assuming Tenant and House models exist and have appropriate attributes like 'name' or 'address'
                     $tenantName = \App\Models\Tenant::find($payment->tenant_id)->name ?? 'Unknown Tenant';
                     $houseAddress = \App\Models\House::find($payment->house_id)->address ?? 'Unknown House';
                     $reportContent .= "- Payment ID: {$payment->id}, Amount: \${$payment->amount}, Date: {$payment->payment_date}, Tenant: {$tenantName}, House: {$houseAddress}\n";
@@ -78,16 +73,20 @@ class GenerateMonthlyReportJob implements ShouldQueue
             }
             Log::info('GenerateMonthlyReportJob: Finished formatting report content.');
 
-            // 5. Deliver or store the report (Logging)
+            // 5. Deliver or store the report (Logging and Email)
             Log::info('GenerateMonthlyReportJob: Logging report content.');
-            Log::info($reportContent); // Log the actual report
+            Log::info($reportContent); // Keep logging to the file
             Log::info('GenerateMonthlyReportJob: Finished logging report content.');
 
-            // The email delivery part is commented out, keep it that way
-            // \Illuminate\Support\Facades\Mail::raw(...);
+            // Uncomment and modify the email delivery here:
+            Log::info('GenerateMonthlyReportJob: Attempting to send email...');
+            Mail::raw($reportContent, function ($message) use ($startOfLastMonth) {
+                $message->to('lawunkhant@gmail.com') // !!! Change this to the actual recipient's email address !!!
+                    ->subject('Monthly Financial Report for '.$startOfLastMonth->format('Y-m'));
+            });
+            Log::info('GenerateMonthlyReportJob: Email sending attempt finished.');
 
         } catch (Exception $e) {
-            // Catch any exception and log it with details
             Log::error('GenerateMonthlyReportJob: Exception caught during handle: '.$e->getMessage());
             Log::error('GenerateMonthlyReportJob: Exception trace: '.$e->getTraceAsString());
         }
