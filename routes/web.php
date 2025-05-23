@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HouseController;
@@ -15,7 +16,18 @@ use App\Models\Tenant;
 use Illuminate\Support\Facades\Route;
 
 // Route for the dashboard
-Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+
+// *** Add the route to handle the login form submission (POST) ***
+// The login form's action in login.blade.php points to route('login'), so we use the same name here for the POST route
+Route::post('/login', [AuthController::class, 'login'])->name('login');
+
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::middleware(['auth'])->group(function () {
+    // Route for the owner dashboard
+    Route::get('/owner/dashboard', [DashboardController::class, 'ownerDashboard'])->name('owner.dashboard');
+
+});
 
 // Routes for houses
 Route::get('/houses', [HouseController::class, 'index'])->name('houses.index');
@@ -69,6 +81,10 @@ Route::get('/bills/{bill}', [BillController::class, 'show'])->name('bills.show')
 Route::get('/bills/{bill}/edit', [BillController::class, 'edit'])->name('bills.edit');
 Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.update');
 Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
+
+// Routes for owners houses
+Route::get('/owner/houses/create', [App\Http\Controllers\HouseController::class, 'createForOwner'])->name('owner.houses.create');
+Route::post('/owner/houses', [HouseController::class, 'storeForOwner'])->name('owner.houses.store');
 
 // Test email route
 Route::get('/send-test-email', function () {

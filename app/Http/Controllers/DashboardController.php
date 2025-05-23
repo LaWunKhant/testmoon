@@ -2,21 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\House; // Import Auth Facade
-use Illuminate\Support\Facades\Auth; // Import House model
+use App\Models\House;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log; // *** Import Log Facade ***
 
 class DashboardController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        // Apply the 'auth' middleware to this controller's methods
-        $this->middleware('auth');
-    }
+    // Keep the constructor with auth middleware...
 
     /**
      * Show the owner's dashboard with their houses and tenants.
@@ -25,17 +17,38 @@ class DashboardController extends Controller
      */
     public function ownerDashboard()
     {
-        // Get the currently authenticated user's ID
         $ownerId = Auth::id();
+
+        Log::info("Fetching houses for owner ID: {$ownerId}"); // Log owner ID
 
         // Fetch houses belonging to the authenticated owner, and eager load their tenants
         $ownerHouses = House::where('owner_id', $ownerId)
             ->with('tenants') // Eager load the tenants relationship
             ->get();
 
-        // Return the view, passing the owner's houses data to it
+        Log::info('Found '.$ownerHouses->count()." houses for owner ID: {$ownerId}"); // Log number of houses found
+
+        // *** Add logging to show house IDs and linked tenant IDs ***
+        if ($ownerHouses->isEmpty()) {
+            Log::info("No houses found for owner ID: {$ownerId}");
+        } else {
+            Log::info('Houses fetched and their linked tenants:');
+            foreach ($ownerHouses as $house) {
+                Log::info("  - House ID: {$house->id}, Address: {$house->address}");
+                if ($house->tenants->isEmpty()) {
+                    Log::info("    No tenants linked to House ID: {$house->id}");
+                } else {
+                    Log::info('    Linked tenants (IDs):');
+                    foreach ($house->tenants as $tenant) {
+                        Log::info("      - Tenant ID: {$tenant->id}, Name: {$tenant->name}");
+                    }
+                }
+            }
+        }
+        // *** End logging block ***
+
         return view('owner.dashboard', compact('ownerHouses'));
     }
 
-    // You might have other dashboard methods here
+    // Keep other dashboard methods...
 }
