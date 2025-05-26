@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 // --- Add necessary Use statements here at the top, correctly ---
 // Use your application's base controller
+
+use App\Mail\CustomTenantEmail;
 use App\Models\House;
+use App\Models\Tenant;
 use Illuminate\Http\Request; // For the House model
 use Illuminate\Support\Facades\Auth; // For authentication checks
 use Illuminate\Support\Facades\Log; // For logging messages
+use Illuminate\Support\Facades\Mail;
 // For file uploads (photo)
 use Illuminate\Support\Facades\Validator; // For request validation
 
@@ -250,6 +254,328 @@ class HouseController extends Controller
 
             // Redirect back to the dashboard with an error message
             return redirect()->route('owner.dashboard')->with('error', 'Failed to delete house.');
+        }
+    }
+
+    public function showTenants(House $house)
+    {
+        Log::info('Attempting to show tenants for house.', ['user_id' => Auth::id(), 'house_id' => $house->id]);
+
+        // --- Authorization Check (Owner must own this house) ---
+        if ($house->owner_id !== Auth::id()) {
+            Log::warning('Unauthorized attempt to view tenants for house.', ['user_id' => Auth::id(), 'house_id' => $house->id]);
+
+            return redirect()->route('owner.dashboard')->with('error', 'You do not own this house.');
+        }
+        Log::info('Authorization check passed for viewing tenants for house.', ['user_id' => Auth::id(), 'house_id' => $house->id]);
+
+        // The $house model is already loaded by Route Model Binding.
+        // The tenants are already accessible via the relationship: $house->tenants
+        // If you need to eager load relationships on tenants (like their rent payments), do it here:
+        // $house->load('tenants.rentPayments'); // Eager load rent payments for each tenant
+
+        // Return the view, passing the house model (with eager-loaded tenants if done) to it
+        return view('owner.houses.tenants', compact('house')); // Return the name of your show tenants view file
+    }
+
+    public function createTenantForHouse(House $house)
+    {
+        Log::info('Attempting to show create tenant form for house.', ['user_id' => Auth::id(), 'house_id' => $house->id]);
+
+        // --- Authorization Check (Owner must own this house) ---
+        if ($house->owner_id !== Auth::id()) {
+            Log::warning('Unauthorized attempt to view create tenant form for house.', ['user_id' => Auth::id(), 'house_id' => $house->id]);
+
+            // Redirect back to the dashboard with an error message if owner doesn't own the house
+            return redirect()->route('owner.dashboard')->with('error', 'You do not own this house.');
+        }
+        Log::info('Authorization check passed for viewing create tenant form for house.', ['user_id' => Auth::id(), 'house_id' => $house->id]);
+
+        // Return the view, passing the house model to it
+        // The view will know which house the new tenant is being added to
+        return view('owner.houses.tenants.create', compact('house')); // *** Return the name of your create tenant view file ***
+    }
+
+    public function storeTenantForHouse(Request $request, House $house)
+    {
+        Log::info('Attempting to store new tenant for house.', ['user_id' => Auth::id(), 'house_id' => $house->id]);
+
+        // --- Authorization Check (Owner must own this house) ---
+        // This check is important to prevent someone from adding a tenant to a house they don't own
+        if ($house->owner_id !== Auth::id()) {
+            Log::warning('Unauthorized attempt to store tenant for house.', ['user_id' => Auth::id(), 'house_id' => $house->id]);
+
+            // Redirect back to the dashboard with an error message if owner doesn't own the house
+            return redirect()->route('owner.dashboard')->with('error', 'You do not own this house.');
+        }
+        Log::info('Authorization check passed for storing tenant for house.', ['user_id' => Auth::id(), 'house_id' => $house->id]);
+
+        // --- Validation ---
+        $validator = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:tenants,email'], // Ensure email is unique in tenants table
+            'phone' => ['nullable', 'string', 'max:20'], // Adjust max length as needed for phone numbers
+            'rent' => ['required', 'numeric', 'min:0'],
+            // We don't need to validate house_id here, as we get it from the route/Route Model Binding
+        ]);
+
+        if ($validator->fails()) {
+            Log::warning('Tenant creation validation failed for house.', ['user_id' => Auth::id(), 'house_id' => $house->id, 'errors' => $validator->errors()->all()]);
+
+            // Redirect back to the create tenant form with validation errors and old input
+            // Pass the house model to the redirect route so the URL is correctly generated
+            return redirect()->route('owner.houses.tenants.create', $house)
+                ->withErrors($validator)
+                ->withInput();
+        }
+        Log::info('Tenant creation validation passed for house.', ['user_id' => Auth::id(), 'house_id' => $house->id]);
+
+        try {
+            // --- Create the Tenant Record and Link to House ---
+            $tenantData = $validator->validated();
+            // *** Set the house_id for the new tenant to the ID of the current house ***
+            $tenantData['house_id'] = $house->id;
+
+            // Ensure necessary Use statements are at the top:
+            // use App\Models\Tenant;
+            $tenant = Tenant::create($tenantData); // Create the new tenant record in the database
+
+            Log::info('Tenant created successfully and linked to house.', ['tenant_id' => $tenant->id, 'house_id' => $house->id]);
+
+            // --- Redirect after successful creation ---
+            // Redirect back to the tenant list page for this house with a success message
+            return redirect()->route('owner.houses.tenants.index', $house)->with('success', 'Tenant added successfully!');
+
+            // Alternatively, redirect back to the create tenant form to add another:
+            // return redirect()->route('owner.houses.tenants.create', $house)->with('success', 'Tenant added successfully!');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to store new tenant for house: '.$e->getMessage(), ['user_id' => Auth::id(), 'house_id' => $house->id, 'exception' => $e]);
+
+            // Redirect back to the create tenant form with an error message and old input
+            return redirect()->route('owner.houses.tenants.create', $house)->withInput()->with('error', 'Failed to add tenant.');
+        }
+    }
+
+    public function editTenant(Tenant $tenant) // Use full namespace or ensure Tenant model is imported
+    {
+        Log::info('Attempting to show edit form for tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        // --- Authorization Check (Owner must own the house this tenant is linked to) ---
+        // To perform this check, we need access to the house relationship on the tenant.
+        // Ensure the 'house' relationship is defined in your Tenant model: public function house() { return $this->belongsTo(House::class); }
+        // And ensure the house is owned by the logged-in user.
+        if (! $tenant->house || $tenant->house->owner_id !== Auth::id()) {
+            Log::warning('Unauthorized attempt to edit tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+            // Redirect back to the dashboard or the house tenants list with an error
+            // Redirecting to the specific house's tenant list is better if the tenant is linked to a house.
+            // Need the house ID for the redirect route owner.houses.tenants.index
+            $redirectRoute = $tenant->house ? route('owner.houses.tenants.index', $tenant->house) : route('owner.dashboard');
+
+            return redirect($redirectRoute)->with('error', 'You do not own this tenant or their house.');
+        }
+        Log::info('Authorization check passed for editing tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        // Return the view, passing the tenant model to it
+        return view('owner.tenants.edit', compact('tenant')); // *** Return the name of your edit tenant view file ***
+    }
+
+    public function updateTenant(Request $request, Tenant $tenant) // Ensure Tenant is imported or use full namespace
+    {
+        Log::info('Attempting to update tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        // --- Authorization Check (Owner must own the house this tenant is linked to) ---
+        // Ensure the 'house' relationship is defined in your Tenant model
+        if (! $tenant->house || $tenant->house->owner_id !== Auth::id()) {
+            Log::warning('Unauthorized attempt to update tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+            // Redirect back to the dashboard or the house tenants list with an error
+            $redirectRoute = $tenant->house ? route('owner.houses.tenants.index', $tenant->house) : route('owner.dashboard');
+
+            return redirect($redirectRoute)->with('error', 'You do not own this tenant or their house.');
+        }
+        Log::info('Authorization check passed for updating tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        // --- Validation (Similar to store, but email unique rule needs to ignore the current tenant) ---
+        $validator = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:tenants,email,'.$tenant->id], // Unique email, but ignore the current tenant's email
+            'phone' => ['nullable', 'string', 'max:20'],
+            'rent' => ['required', 'numeric', 'min:0'],
+            // house_id is not updated via this form
+        ]);
+
+        if ($validator->fails()) {
+            Log::warning('Tenant update validation failed.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id, 'errors' => $validator->errors()->all()]);
+
+            // Redirect back to the edit tenant form with validation errors and old input
+            // Pass the tenant model to the redirect route so the URL is correctly generated
+            return redirect()->route('owner.tenants.edit', $tenant)
+                ->withErrors($validator)
+                ->withInput();
+        }
+        Log::info('Tenant update validation passed.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        try {
+            // --- Prepare Tenant Data for Update ---
+            // Use the validated data. house_id is not updated via the form.
+            $tenantData = $validator->validated();
+
+            // --- Update the Tenant Record ---
+            $tenant->update($tenantData); // Update the tenant attributes
+
+            Log::info('Tenant updated successfully.', ['tenant_id' => $tenant->id]);
+
+            // --- Redirect after successful update ---
+            // Redirect back to the tenant list page for the house this tenant is linked to
+            // Ensure the 'house' relationship is loaded to get the house ID for the redirect route
+            return redirect()->route('owner.houses.tenants.index', $tenant->house)->with('success', 'Tenant updated successfully!');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update tenant: '.$e->getMessage(), ['user_id' => Auth::id(), 'tenant_id' => $tenant->id, 'exception' => $e]);
+
+            // Redirect back to the edit tenant form with an error message and old input
+            return redirect()->route('owner.tenants.edit', $tenant)->withInput()->with('error', 'Failed to update tenant.');
+        }
+    }
+
+    public function destroyTenant(Tenant $tenant) // Ensure Tenant is imported or use full namespace
+    {
+        Log::info('Attempting to delete tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        // --- Authorization Check (Owner must own the house this tenant is linked to) ---
+        // Ensure the 'house' relationship is defined in your Tenant model
+        // Eager load the house relationship before the check to avoid N+1 query if not already loaded
+        $tenant->load('house');
+
+        if (! $tenant->house || $tenant->house->owner_id !== Auth::id()) {
+            Log::warning('Unauthorized attempt to delete tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+            // Redirect back to the dashboard or the house tenants list with an error
+            $redirectRoute = $tenant->house ? route('owner.houses.tenants.index', $tenant->house) : route('owner.dashboard');
+
+            return redirect($redirectRoute)->with('error', 'You do not own this tenant or their house.');
+        }
+        Log::info('Authorization check passed for deleting tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        try {
+            // --- Delete the Tenant Record ---
+            // Before deleting the tenant, consider cascading deletes for related data (e.g., rent payments, maintenance requests linked to this tenant).
+            // You might need to configure cascade deletes in your database migrations for these relationships,
+            // or manually delete related records here before deleting the tenant.
+            // For simplicity now, we'll just delete the tenant record.
+            $tenant->delete(); // Delete the tenant record from the database
+
+            Log::info('Tenant deleted successfully.', ['tenant_id' => $tenant->id]);
+
+            // --- Redirect after successful deletion ---
+            // Redirect back to the tenant list page for the house the tenant *was* linked to
+            // We need the house ID *before* deleting the tenant record
+            $houseId = $tenant->house_id; // Get the house_id before deleting the tenant
+
+            // Ensure the house still exists before redirecting to its tenant list
+            $house = \App\Models\House::find($houseId);
+            $redirectRoute = $house ? route('owner.houses.tenants.index', $house) : route('owner.dashboard');
+
+            return redirect($redirectRoute)->with('success', 'Tenant deleted successfully!');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to delete tenant: '.$e->getMessage(), ['user_id' => Auth::id(), 'tenant_id' => $tenant->id, 'exception' => $e]);
+
+            // Redirect back to the tenant list page or dashboard with an error
+            // Need the house ID if redirecting back to the tenant list
+            $houseId = $tenant->house_id;
+            $house = \App\Models\House::find($houseId);
+            $redirectRoute = $house ? route('owner.houses.tenants.index', $house) : route('owner.dashboard');
+
+            return redirect($redirectRoute)->with('error', 'Failed to delete tenant.');
+        }
+    }
+
+    public function composeEmail(\App\Models\Tenant $tenant) // Use full namespace or ensure Tenant model is imported
+    {
+        Log::info('Attempting to show compose email form for tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        // --- Authorization Check (Owner must own the house this tenant is linked to) ---
+        // Ensure the 'house' relationship is defined in your Tenant model
+        $tenant->load('house'); // Eager load the house relationship for the check
+
+        if (! $tenant->house || $tenant->house->owner_id !== Auth::id()) {
+            Log::warning('Unauthorized attempt to view compose email form for tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+            // Redirect back to the dashboard or the house tenants list with an error
+            $redirectRoute = $tenant->house ? route('owner.houses.tenants.index', $tenant->house) : route('owner.dashboard');
+
+            return redirect($redirectRoute)->with('error', 'You do not own this tenant or their house.');
+        }
+        Log::info('Authorization check passed for viewing compose email form for tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        // Return the view, passing the tenant model to it
+        return view('owner.tenants.compose-email', compact('tenant')); // *** Return the name of your compose email view file ***
+    }
+
+    public function sendEmail(Request $request, Tenant $tenant) // Ensure Tenant is imported or use full namespace
+    {
+        Log::info('Attempting to send email to tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id, 'tenant_email' => $tenant->email]);
+
+        // --- Authorization Check (Owner must own the house this tenant is linked to) ---
+        // Ensure the 'house' relationship is defined in your Tenant model
+        $tenant->load('house'); // Eager load the house relationship for the check
+
+        if (! $tenant->house || $tenant->house->owner_id !== Auth::id()) {
+            Log::warning('Unauthorized attempt to send email to tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+            // Redirect back with an error
+            $redirectRoute = $tenant->house ? route('owner.houses.tenants.index', $tenant->house) : route('owner.dashboard');
+
+            return redirect($redirectRoute)->with('error', 'You do not own this tenant or their house.');
+        }
+        Log::info('Authorization check passed for sending email to tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        // --- Validation for Email Subject and Body ---
+        $validator = Validator::make($request->all(), [
+            'subject' => ['required', 'string', 'max:255'],
+            'body' => ['required', 'string'],
+            'tenant_id' => ['required', 'exists:tenants,id'], // Validate the hidden tenant_id (optional, but good practice)
+        ]);
+
+        if ($validator->fails()) {
+            Log::warning('Email composition validation failed.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id, 'errors' => $validator->errors()->all()]);
+
+            // Redirect back to the compose email form with validation errors and old input
+            // Pass the tenant model to the redirect route so the URL is correctly generated
+            return redirect()->route('owner.tenants.compose-email', $tenant)
+                ->withErrors($validator)
+                ->withInput();
+        }
+        Log::info('Email composition validation passed.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+        try {
+            // --- Send the Email using the Mailable ---
+            // Ensure the tenant has an email address
+            if ($tenant->email) {
+                // Instantiate your custom email Mailable, passing the subject and body
+                // You might also pass the owner user if needed in the email view
+                $emailMailable = new CustomTenantEmail($request->subject, $request->body, $tenant); // Pass tenant to the Mailable
+
+                // Dispatch the Mailable to the tenant's email address
+                // Use Mail::to() for the recipient
+                Mail::to($tenant->email)->send($emailMailable); // Use send() for immediate sending, or queue() for background
+
+                Log::info('Custom email sent successfully to tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id, 'recipient_email' => $tenant->email]);
+
+                // --- Redirect after successful sending ---
+                // Redirect back to the tenant list page for the house this tenant is linked to with a success message
+                return redirect()->route('owner.houses.tenants.index', $tenant->house)->with('success', 'Email sent successfully!');
+
+            } else {
+                Log::warning('Cannot send email to tenant: Tenant has no email address.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
+
+                // Redirect back with a warning message
+                return redirect()->route('owner.houses.tenants.index', $tenant->house)->with('warning', 'Tenant does not have an email address.');
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send email to tenant: '.$e->getMessage(), ['user_id' => Auth::id(), 'tenant_id' => $tenant->id, 'exception' => $e]);
+
+            // Redirect back to the compose email form with an error message and old input
+            return redirect()->route('owner.tenants.compose-email', $tenant)->withInput()->with('error', 'Failed to send email.');
         }
     }
 

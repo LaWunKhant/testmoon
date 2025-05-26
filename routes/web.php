@@ -88,6 +88,14 @@ Route::post('/owner/houses', [HouseController::class, 'storeForOwner'])->name('o
 Route::get('/owner/houses/{house}/edit', [HouseController::class, 'editForOwner'])->name('owner.houses.edit');
 Route::put('/owner/houses/{house}', [HouseController::class, 'updateForOwner'])->name('owner.houses.update');
 Route::delete('/owner/houses/{house}', [HouseController::class, 'destroyForOwner'])->name('owner.houses.destroy');
+
+// Routes for owners tenants
+Route::get('/owner/houses/{house}/tenants', [HouseController::class, 'showTenants'])->name('owner.houses.tenants.index');
+Route::get('/owner/houses/{house}/tenants/create', [HouseController::class, 'createTenantForHouse'])->name('owner.houses.tenants.create');
+Route::post('/owner/houses/{house}/tenants', [HouseController::class, 'storeTenantForHouse'])->name('owner.houses.tenants.store');
+Route::get('/owner/tenants/{tenant}/edit', [HouseController::class, 'editTenant'])->name('owner.tenants.edit');
+Route::put('/owner/tenants/{tenant}', [HouseController::class, 'updateTenant'])->name('owner.tenants.update');
+Route::delete('/owner/tenants/{tenant}', [HouseController::class, 'destroyTenant'])->name('owner.tenants.destroy');
 // Test email route
 Route::get('/send-test-email', function () {
     // Try to find an existing tenant with the test email.
@@ -127,3 +135,6 @@ Route::get('/dispatch-monthly-reminders-job', function () {
 Route::get('/send-overdue-reminders', [PaymentReminderController::class, 'sendOverdueReminders']);
 
 Route::patch('/payments/{id}/status', [PaymentController::class, 'updatePaymentStatus']);
+
+Route::get('/owner/tenants/{tenant}/compose-email', [HouseController::class, 'composeEmail'])->name('owner.tenants.compose-email');
+Route::post('/owner/tenants/{tenant}/send-email', [HouseController::class, 'sendEmail'])->name('owner.tenants.send-email');

@@ -11,23 +11,35 @@
         .tenants-list { margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
         .tenants-list h4 { margin-top: 0; margin-bottom: 10px; color: #555; }
         .tenants-list ul { list-style: none; padding: 0; margin: 0; }
-        .tenants-list li { background-color: #f9f9f9; padding: 10px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #ddd; }
+        .tenants-list li { background-color: #f9f9f9; padding: 10px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #ddd; position: relative; }
         .tenants-list li strong { color: #007bff; }
 
-        .add-house-button {
-            display: inline-block;
-            margin-bottom: 20px;
-            padding: 10px 15px;
-            background-color: #007bff;
+        /* --- Simplified and Corrected Button Styles --- */
+        .btn {
+            display: inline-block; /* Buttons and links display inline */
+            padding: 8px 12px; /* Base padding */
             color: white;
             text-decoration: none;
             border-radius: 4px;
-            font-size: 16px;
+            font-size: 14px; /* Base font size */
             cursor: pointer;
+            border: none; /* Remove default button border */
+            margin-right: 5px; /* Space between buttons */
+            text-align: center; /* Center text within buttons */
         }
-        .add-house-button:hover {
-            background-color: #0056b3;
-        }
+
+        /* Specific Button Colors (Applied directly to .btn with color class) */
+        .btn-primary { background-color: #007bff; } /* Blue */
+        .btn-success { background-color: #28a745; } /* Green */
+        .btn-warning { background-color: #ffc107; color: #212529; } /* Yellow */
+        .btn-danger { background-color: #dc3545; color: white; } /* Red */
+        .btn-secondary { background-color: #6c757d; color: white; } /* Gray */
+
+
+        .btn:hover { opacity: 0.9; } /* Simple hover effect */
+
+        /* --- End Simplified Button Styles --- */
+
 
          /* Added style for alert messages */
          .alert {
@@ -46,6 +58,27 @@
             background-color: #f8d7da;
             border-color: #f5c6cb;
         }
+
+        /* Styles for tenant item layout */
+         .tenant-item-content {
+             display: inline-block; /* Display tenant details inline */
+             margin-right: 15px; /* Space between details and buttons */
+             vertical-align: top; /* Align to the top */
+         }
+
+         .tenant-actions {
+             display: inline-block; /* Display tenant action buttons inline */
+             vertical-align: top; /* Align to the top */
+         }
+
+         /* Specific tenant action button overrides if needed (applying btn styles directly is usually sufficient) */
+         /* .tenant-action-link, .tenant-action-button {
+             font-size: 12px;
+             padding: 3px 8px;
+             margin-left: 10px;
+         } */
+
+
     </style>
 </head>
 <body>
@@ -53,8 +86,11 @@
     <div class="container">
         <h1>Owner Dashboard</h1>
 
-        {{-- Add the "Add New House" button here --}}
-        <a href="{{ route('owner.houses.create') }}" class="add-house-button">Add New House</a>
+        {{-- *** Add the "Add New House" button here (OUTSIDE the house loop) *** --}}
+        <p style="margin-bottom: 20px;">
+             <a href="{{ route('owner.houses.create') }}" class="btn btn-primary">Add New House</a>
+        </p>
+
 
         {{-- Display success message from session flash --}}
         @if (session('success'))
@@ -82,7 +118,7 @@
 
                     {{-- Display Capacity and Photo --}}
                     <p><strong>Capacity:</strong> {{ $house->capacity ?? 'N/A' }} tenants</p>
-                    @if ($house->hasMedia('photos')) {{-- Check if the house has media in the 'photos' collection --}}
+                    @if ($house->hasMedia('photos'))
                          <p><strong>Photo:</strong></p>
                         {{-- Get the URL of the first media item in the 'photos' collection --}}
                         <img src="{{ $house->getFirstMediaUrl('photos') }}" alt="House Photo" style="max-width: 300px; height: auto; display: block; margin-top: 10px;">
@@ -90,23 +126,26 @@
                         <p><strong>Photo:</strong> No photo available</p>
                     @endif
 
-                    {{-- *** Add the Edit Button/Link Here *** --}}
+                    {{-- Action Buttons for House (Add Tenant, Edit House, Delete House) --}}
+                    {{-- Placing these buttons in a paragraph for layout --}}
                     <p style="margin-top: 20px;">
-                        {{-- Use the named route 'owner.houses.edit' and pass the $house model --}}
-                        <a href="{{ route('owner.houses.edit', $house) }}" class="add-house-button" style="background-color: #ffc107; color: #212529;">Edit House</a>
-                    </p>
+                        {{-- Add Tenant Button/Link --}}
+                        {{-- Use the named route 'owner.houses.tenants.create' and pass the $house model --}}
+                        <a href="{{ route('owner.houses.tenants.create', $house) }}" class="btn btn-success">Add Tenant</a>
 
-                    {{-- Delete Button (using a form for DELETE request) --}}
+                        {{-- Edit House Button --}}
+                        {{-- Use the named route 'owner.houses.edit' and pass the $house model --}}
+                        <a href="{{ route('owner.houses.edit', $house) }}" class="btn btn-warning">Edit House</a>
+
+                        {{-- Delete House Button (using a form for DELETE request) --}}
+                        {{-- Use the named route 'owner.houses.destroy' and pass the $house model --}}
                         <form action="{{ route('owner.houses.destroy', $house) }}" method="POST" style="display: inline;">
-                            @csrf {{-- CSRF token --}}
-                            @method('DELETE') {{-- Spoof the DELETE method --}}
-                            <button type="submit" class="add-house-button" style="background-color: #dc3545; color: white; border: none; cursor: pointer;" onclick="return confirm('Are you sure you want to delete this house and all its associated data?')">Delete House</button>
+                            @csrf
+                            @method('DELETE')
+                            {{-- Removed the problematic onclick attribute entirely --}}
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this house and all its associated data?')">Delete House</button> {{-- Simplified onclick back to a static string --}}
                         </form>
                     </p>
-                    {{-- *** End Edit Button/Link *** --}}
-
-                     {{-- *** Add the Delete Button/Link Here *** --}}
-                    {{-- *** End Delete Button/Link *** --}}
 
 
                     <div class="tenants-list">
@@ -117,22 +156,45 @@
                             <ul>
                                 @foreach ($house->tenants as $tenant)
                                     <li>
-                                        <strong>{{ $tenant->name ?? 'N/A' }}</strong><br>
-                                        Email: {{ $tenant->email ?? 'N/A' }}<br>
-                                        Phone: {{ $tenant->phone ?? 'N/A' }}<br>
-                                        Rent: ${{ number_format($tenant->rent ?? 0, 2) }}
+                                        {{-- Display Tenant details --}}
+                                        <div class="tenant-item-content">
+                                             <strong>{{ $tenant->name ?? 'N/A' }}</strong><br>
+                                            Email: {{ $tenant->email ?? 'N/A' }}<br>
+                                            Phone: {{ $tenant->phone ?? 'N/A' }}<br>
+                                            Rent: ${{ number_format($tenant->rent ?? 0, 2) }}
+                                        </div>
+
+
+                                        {{-- Edit and Delete Tenant Buttons/Links (on the tenant item) and Mail Tenant Button --}}
+                                        <div class="tenant-actions">
+                                            {{-- Edit Tenant Link --}}
+                                            {{-- Use the named route 'owner.tenants.edit' and pass the $tenant model --}}
+                                            <a href="{{ route('owner.tenants.edit', $tenant) }}" class="btn btn-warning">Edit</a>
+
+                                            {{-- Delete Tenant Button (using a form for DELETE request) --}}
+                                            {{-- Use the named route 'owner.tenants.destroy' and pass the $tenant model --}}
+                                            <form action="{{ route('owner.tenants.destroy', $tenant) }}" method="POST" style="display: inline;">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this tenant and all their associated data?')">Delete</button> {{-- Simplified static onclick --}}
+                                            </form>
+
+                                            {{-- Send Email Button/Link (if tenant has email) --}}
+                                            @if ($tenant->email)
+                                                 {{-- Use a link that goes to the compose email form for this tenant --}}
+                                                 {{-- Use the named route 'owner.tenants.compose-email' --}}
+                                                 <a href="{{ route('owner.tenants.compose-email', $tenant) }}" class="btn btn-primary">Send Email</a>
+                                            @endif
+                                        </div>
+
                                     </li>
                                 @endforeach
                             </ul>
-                        {{-- Close tenants list ul and if --}}
-                        </ul>
                         @endif
-                    </div> {{-- Close tenants-list div --}}
-                </div> {{-- Close house-container div --}}
+                    </div>
+                </div>
             @endforeach
-        {{-- Close ownerHouses if --}}
         @endif
-    </div> {{-- Close container div --}}
+    </div>
 
 </body>
 </html>
