@@ -80,20 +80,33 @@
                     <p><strong>Price:</strong> ${{ number_format($house->price ?? 0, 2) }}</p>
                     <p><strong>Description:</strong> {{ $house->description ?? 'N/A' }}</p>
 
-                    {{-- *** Add display for Capacity and Photo Here *** --}}
-
-                    {{-- Display Capacity --}}
+                    {{-- Display Capacity and Photo --}}
                     <p><strong>Capacity:</strong> {{ $house->capacity ?? 'N/A' }} tenants</p>
-
-                    {{-- Display Photo (if exists) --}}
-                    @if ($house->photo_path)
-                        <p><strong>Photo:</strong></p>
-                        {{-- Generate public URL for the stored photo using Storage facade --}}
-                        <img src="{{ Storage::url($house->photo_path) }}" alt="House Photo" style="max-width: 300px; height: auto; display: block; margin-top: 10px;">
+                    @if ($house->hasMedia('photos')) {{-- Check if the house has media in the 'photos' collection --}}
+                         <p><strong>Photo:</strong></p>
+                        {{-- Get the URL of the first media item in the 'photos' collection --}}
+                        <img src="{{ $house->getFirstMediaUrl('photos') }}" alt="House Photo" style="max-width: 300px; height: auto; display: block; margin-top: 10px;">
                     @else
                         <p><strong>Photo:</strong> No photo available</p>
                     @endif
-                    {{-- *** End display for Capacity and Photo *** --}}
+
+                    {{-- *** Add the Edit Button/Link Here *** --}}
+                    <p style="margin-top: 20px;">
+                        {{-- Use the named route 'owner.houses.edit' and pass the $house model --}}
+                        <a href="{{ route('owner.houses.edit', $house) }}" class="add-house-button" style="background-color: #ffc107; color: #212529;">Edit House</a>
+                    </p>
+
+                    {{-- Delete Button (using a form for DELETE request) --}}
+                        <form action="{{ route('owner.houses.destroy', $house) }}" method="POST" style="display: inline;">
+                            @csrf {{-- CSRF token --}}
+                            @method('DELETE') {{-- Spoof the DELETE method --}}
+                            <button type="submit" class="add-house-button" style="background-color: #dc3545; color: white; border: none; cursor: pointer;" onclick="return confirm('Are you sure you want to delete this house and all its associated data?')">Delete House</button>
+                        </form>
+                    </p>
+                    {{-- *** End Edit Button/Link *** --}}
+
+                     {{-- *** Add the Delete Button/Link Here *** --}}
+                    {{-- *** End Delete Button/Link *** --}}
 
 
                     <div class="tenants-list">
@@ -111,12 +124,15 @@
                                     </li>
                                 @endforeach
                             </ul>
+                        {{-- Close tenants list ul and if --}}
+                        </ul>
                         @endif
-                    </div>
-                </div>
+                    </div> {{-- Close tenants-list div --}}
+                </div> {{-- Close house-container div --}}
             @endforeach
+        {{-- Close ownerHouses if --}}
         @endif
-    </div>
+    </div> {{-- Close container div --}}
 
 </body>
 </html>

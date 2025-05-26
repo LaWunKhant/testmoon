@@ -85,7 +85,9 @@ Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.
 // Routes for owners houses
 Route::get('/owner/houses/create', [App\Http\Controllers\HouseController::class, 'createForOwner'])->name('owner.houses.create');
 Route::post('/owner/houses', [HouseController::class, 'storeForOwner'])->name('owner.houses.store');
-
+Route::get('/owner/houses/{house}/edit', [HouseController::class, 'editForOwner'])->name('owner.houses.edit');
+Route::put('/owner/houses/{house}', [HouseController::class, 'updateForOwner'])->name('owner.houses.update');
+Route::delete('/owner/houses/{house}', [HouseController::class, 'destroyForOwner'])->name('owner.houses.destroy');
 // Test email route
 Route::get('/send-test-email', function () {
     // Try to find an existing tenant with the test email.
