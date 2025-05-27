@@ -40,6 +40,12 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // *** Ensure this tenant guard definition is present ***
+        'tenant' => [
+            'driver' => 'session',
+            'provider' => 'tenants',
+        ],
     ],
 
     /*
@@ -62,13 +68,20 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => App\Models\User::class,
         ],
 
         // 'users' => [
         //     'driver' => 'database',
         //     'table' => 'users',
         // ],
+
+        // *** Add a new provider for tenants ***
+        'tenants' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Tenant::class, // Model for the 'tenants' provider
+        ],
+
     ],
 
     /*

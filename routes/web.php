@@ -41,6 +41,24 @@ Route::middleware(['auth'])->group(function () {
 
 });
 
+// Use the 'auth' middleware with the 'tenant' guard
+Route::middleware(['auth:tenant'])->group(function () { // Use auth:tenant middleware
+    // Route for the tenant dashboard (showing houses for rent)
+    // You can create a new controller for this, or add a method to an existing one
+    // Let's add a method to HouseController for now to fetch houses
+    Route::get('/tenant/dashboard', [HouseController::class, 'indexForTenants'])->name('tenant.dashboard'); // *** Add this GET route! ***
+
+    // You might add other routes for tenants here (viewing their rental info, submitting requests)
+    Route::get('/tenant/my-rental', [TenantController::class, 'showMyRental'])->name('tenant.my-rental'); // Example tenant view
+    Route::get('/tenant/maintenance-request/create', [TenantController::class, 'createMaintenanceRequest'])->name('tenant.maintenance-request.create'); // Example tenant request form
+
+});
+
+// *** Add the Tenant Registration form route (GET) ***
+Route::get('/tenant/login', [AuthController::class, 'showTenantLoginForm'])->name('tenant.login');
+Route::get('/tenant/register', [AuthController::class, 'showTenantRegistrationForm'])->name('tenant.register');
+Route::post('/tenant/login', [AuthController::class, 'loginTenant'])->name('tenant.login.post');
+Route::post('/tenant/register', [AuthController::class, 'registerTenant'])->name('tenant.register.post');
 // Routes for houses
 Route::get('/houses', [HouseController::class, 'index'])->name('houses.index');
 Route::get('/houses/create', [HouseController::class, 'create'])->name('houses.create');

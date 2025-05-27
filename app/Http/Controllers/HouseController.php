@@ -405,4 +405,19 @@ class HouseController extends Controller
             return redirect()->route('owner.tenants.compose-email', $tenant)->withInput()->with('error', 'Failed to send email.');
         }
     }
+
+    public function indexForTenants()
+    {
+        Log::info('Attempting to show tenant dashboard with houses.');
+
+        // Fetch all houses (or houses available for rent if you add an availability flag)
+        // Eager load relationships needed for display (e.g., photo)
+        $housesForTenants = House::with('media')->get(); // Eager load media for photos (if using Spatie)
+
+        // Implement pagination later if needed
+        // $housesForTenants = House::with('media')->paginate(10);
+
+        // Return the view, passing the houses data to it
+        return view('tenants.dashboard', compact('housesForTenants')); // *** Return the name of your tenant dashboard view file ***
+    }
 }
