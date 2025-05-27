@@ -3,7 +3,6 @@
 <head>
     <title>Compose Email to {{ $tenant->name ?? 'Tenant' }}</title>
     <style>
-        /* Keep existing styles... */
         body { font-family: sans-serif; margin: 20px; }
         .container { max-width: 800px; margin: 0 auto; background-color: #f9f9f9; padding: 20px; border-radius: 8px; }
         .container h1 { text-align: center; margin-bottom: 20px; }
@@ -131,6 +130,7 @@
                  @error('body') <span class="error">{{ $message }}</span> @enderror
             </div>
 
+             {{-- *** Add File Input for Attachments *** --}}
              <div class="form-group">
                  <label for="attachments">Attachments (Optional):</label>
                  {{-- Use name="attachments[]" and multiple attribute for multiple files --}}
@@ -138,6 +138,8 @@
                  @error('attachments') <span class="error">{{ $message }}</span> @enderror
                  {{-- If allowing only one file, remove the [] from name and the multiple attribute --}}
              </div>
+             {{-- *** End File Input *** --}}
+
 
             {{-- Submit Button --}}
             <div class="form-group">

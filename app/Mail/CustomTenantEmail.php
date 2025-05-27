@@ -3,30 +3,38 @@
 namespace App\Mail;
 
 use App\Models\Tenant;
+use Exception;
 use Illuminate\Bus\Queueable;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Queue\SerializesModels; // Ensure Tenant model is imported
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class CustomTenantEmail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $subject; // Make subject public
+    public $subject;
 
-    public $body;    // Make body public
+    public $body;
 
-    public $tenant;  // Make tenant public (useful for view if needed)
+    public $tenant;
+
+    // *** CHANGE THIS FROM protected TO public ***
+    public $attachments = []; // *** Property to hold uploaded files (array of UploadedFile) - MUST BE PUBLIC ***
 
     /**
      * Create a new message instance.
      */
-    public function __construct(string $subject, string $body, ?Tenant $tenant = null) // Accept subject, body, and optional tenant
+    public function __construct(string $subject, string $body, ?Tenant $tenant = null, array $uploadedFiles = [])
     {
         $this->subject = $subject;
         $this->body = $body;
         $this->tenant = $tenant;
+        $this->attachments = $uploadedFiles; // Store uploaded files array
     }
 
     /**
@@ -35,7 +43,7 @@ class CustomTenantEmail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->subject, // Use the subject from the constructor
+            subject: $this->subject,
         );
     }
 
@@ -44,14 +52,11 @@ class CustomTenantEmail extends Mailable
      */
     public function content(): Content
     {
-        // You can use a simple text or markdown view here.
-        // Let's use a simple markdown view for now.
         return new Content(
-            markdown: 'emails.tenants.custom', // Create this view file later
-            with: [ // Pass data to the view (public properties are also available)
+            markdown: 'emails.tenants.custom',
+            with: [
                 'body' => $this->body,
-                'tenant' => $this->tenant, // Pass tenant to the view if needed
-                // You might pass the owner user here too if you want 'from' details in the email body
+                'tenant' => $this->tenant,
             ],
         );
     }
@@ -63,6 +68,20 @@ class CustomTenantEmail extends Mailable
      */
     public function attachments(): array
     {
-        return []; // No attachments by default for custom emails
+        $attachments = [];
+
+        foreach ($this->attachments as $uploadedFile) {
+            if ($uploadedFile instanceof UploadedFile) {
+                try {
+                    $attachments[] = Attachment::fromPath($uploadedFile->getRealPath())
+                        ->as($uploadedFile->getClientOriginalName())
+                        ->withMime($uploadedFile->getMimeType());
+                } catch (Exception $e) {
+                    Log::error('Failed to attach uploaded file to custom email (Mailable): '.$e->getMessage(), ['filename' => $uploadedFile->getClientOriginalName()]);
+                }
+            }
+        }
+
+        return $attachments;
     }
 }

@@ -528,11 +528,13 @@ class HouseController extends Controller
         }
         Log::info('Authorization check passed for sending email to tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
 
-        // --- Validation for Email Subject and Body ---
+        // --- Validation for Email Subject, Body, and Attachments ---
         $validator = Validator::make($request->all(), [
             'subject' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string'],
-            'tenant_id' => ['required', 'exists:tenants,id'], // Validate the hidden tenant_id (optional, but good practice)
+            'tenant_id' => ['required', 'exists:tenants,id'],
+            'attachments.*' => ['nullable', 'file', 'max:5120'], // Validation for attachments (each file max 5MB)
+            // 'attachments' => ['max:10'], // Optional: Max number of files (if multiple is allowed)
         ]);
 
         if ($validator->fails()) {
@@ -547,12 +549,22 @@ class HouseController extends Controller
         Log::info('Email composition validation passed.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id]);
 
         try {
+            // *** Get Uploaded Files from the Request ***
+            $uploadedFiles = []; // Initialize an empty array for uploaded files
+            // Check if any files were uploaded with the name 'attachments' (from the form file input)
+            if ($request->hasFile('attachments')) {
+                // Get the array of UploadedFile objects for the 'attachments' input
+                // Only include files that were successfully uploaded (not null)
+                $uploadedFiles = array_filter((array) $request->file('attachments'));
+                Log::info('Received uploaded files for email.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id, 'file_count' => count($uploadedFiles)]);
+            }
+            // *** End Get Uploaded Files ***
+
             // --- Send the Email using the Mailable ---
             // Ensure the tenant has an email address
             if ($tenant->email) {
-                // Instantiate your custom email Mailable, passing the subject and body
-                // You might also pass the owner user if needed in the email view
-                $emailMailable = new CustomTenantEmail($request->subject, $request->body, $tenant); // Pass tenant to the Mailable
+                // Instantiate your custom email Mailable, passing subject, body, tenant, ***and the uploaded files***
+                $emailMailable = new CustomTenantEmail($request->subject, $request->body, $tenant, $uploadedFiles); // *** Pass $uploadedFiles to the Mailable constructor ***
 
                 // Dispatch the Mailable to the tenant's email address
                 // Use Mail::to() for the recipient
@@ -561,7 +573,6 @@ class HouseController extends Controller
                 Log::info('Custom email sent successfully to tenant.', ['user_id' => Auth::id(), 'tenant_id' => $tenant->id, 'recipient_email' => $tenant->email]);
 
                 // --- Redirect after successful sending ---
-                // Redirect back to the tenant list page for the house this tenant is linked to with a success message
                 return redirect()->route('owner.houses.tenants.index', $tenant->house)->with('success', 'Email sent successfully!');
 
             } else {
