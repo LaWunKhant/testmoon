@@ -28,7 +28,7 @@
             text-align: center; /* Center text within buttons */
         }
 
-        /* Specific Button Colors (Applied directly to .btn with color class) */
+        /* Specific Button Colors */
         .btn-primary { background-color: #007bff; } /* Blue */
         .btn-success { background-color: #28a745; } /* Green */
         .btn-warning { background-color: #ffc107; color: #212529; } /* Yellow */
@@ -61,14 +61,14 @@
 
         /* Styles for tenant item layout */
          .tenant-item-content {
-             display: inline-block; /* Display tenant details inline */
-             margin-right: 15px; /* Space between details and buttons */
-             vertical-align: top; /* Align to the top */
+             display: inline-block;
+             margin-right: 15px;
+             vertical-align: top;
          }
 
          .tenant-actions {
-             display: inline-block; /* Display tenant action buttons inline */
-             vertical-align: top; /* Align to the top */
+             display: inline-block;
+             vertical-align: top;
          }
 
          /* Specific tenant action button overrides if needed (applying btn styles directly is usually sufficient) */
@@ -89,6 +89,14 @@
         {{-- *** Add the "Add New House" button here (OUTSIDE the house loop) *** --}}
         <p style="margin-bottom: 20px;">
              <a href="{{ route('owner.houses.create') }}" class="btn btn-primary">Add New House</a>
+
+             {{-- *** Add Logout Button Here *** --}}
+             {{-- Use a form to send a POST request to the logout route --}}
+             <form action="{{ route('logout') }}" method="POST" style="display: inline;">
+                 @csrf {{-- CSRF token --}}
+                 <button type="submit" class="btn btn-secondary">Logout</button> {{-- Use a secondary button style (gray) --}}
+             </form>
+             {{-- *** End Logout Button *** --}}
         </p>
 
 
@@ -142,8 +150,7 @@
                         <form action="{{ route('owner.houses.destroy', $house) }}" method="POST" style="display: inline;">
                             @csrf
                             @method('DELETE')
-                            {{-- Removed the problematic onclick attribute entirely --}}
-                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this house and all its associated data?')">Delete House</button> {{-- Simplified onclick back to a static string --}}
+                            <button type="submit" class="btn btn-danger">Delete House</button> {{-- Removed onclick here --}}
                         </form>
                     </p>
 
@@ -165,7 +172,7 @@
                                         </div>
 
 
-                                        {{-- Edit and Delete Tenant Buttons/Links (on the tenant item) and Mail Tenant Button --}}
+                                        {{-- Edit and Delete Tenant Buttons/Links (on the tenant item) and Send Email Button --}}
                                         <div class="tenant-actions">
                                             {{-- Edit Tenant Link --}}
                                             {{-- Use the named route 'owner.tenants.edit' and pass the $tenant model --}}
@@ -175,14 +182,14 @@
                                             {{-- Use the named route 'owner.tenants.destroy' and pass the $tenant model --}}
                                             <form action="{{ route('owner.tenants.destroy', $tenant) }}" method="POST" style="display: inline;">
                                                 @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this tenant and all their associated data?')">Delete</button> {{-- Simplified static onclick --}}
+                                                <button type="submit" class="btn btn-danger">Delete</button> {{-- Removed onclick here --}}
                                             </form>
 
                                             {{-- Send Email Button/Link (if tenant has email) --}}
                                             @if ($tenant->email)
                                                  {{-- Use a link that goes to the compose email form for this tenant --}}
                                                  {{-- Use the named route 'owner.tenants.compose-email' --}}
-                                                 <a href="{{ route('owner.tenants.compose-email', $tenant) }}" class="btn btn-primary">Send Email</a>
+                                                 <a href="{{ route('owner.tenants.compose-email', $tenant) }}" class="btn btn-primary" style="margin-left: 10px;">Send Email</a>
                                             @endif
                                         </div>
 

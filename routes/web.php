@@ -15,6 +15,9 @@ use App\Models\RentPayment;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/', function () {
+    return view('welcome'); // *** Return the welcome view ***
+});
 // Route for the dashboard
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 
@@ -23,6 +26,15 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::middleware(['guest'])->group(function () {
+    // Route to display the owner registration form
+    Route::get('/owner/register', [AuthController::class, 'showOwnerRegistrationForm'])->name('owner.register'); // *** Add this GET route! ***
+
+    Route::post('/owner/register', [AuthController::class, 'registerOwner'])->name('owner.register.post');
+});
+
 Route::middleware(['auth'])->group(function () {
     // Route for the owner dashboard
     Route::get('/owner/dashboard', [DashboardController::class, 'ownerDashboard'])->name('owner.dashboard');

@@ -12,7 +12,7 @@
         .form-group input[type="email"],
         .form-group input[type="tel"],
         .form-group input[type="number"],
-        .form-group input[type="file"] { /* Add file input styling */
+        .form-group input[type="file"] {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
@@ -20,7 +20,7 @@
             box-sizing: border-box;
         }
         .form-group textarea {
-            width: 100%; /* Ensure textarea also has width */
+            width: 100%;
             min-height: 150px;
             padding: 8px;
             border: 1px solid #ccc;
@@ -109,7 +109,7 @@
         @endif
 
 
-        <form method="POST" action="{{ route('owner.tenants.send-email', $tenant) }}" enctype="multipart/form-data"> {{-- *** Ensure enctype is set for file uploads *** --}}
+        <form method="POST" action="{{ route('owner.tenants.send-email', $tenant) }}" enctype="multipart/form-data"> {{-- *** enctype is essential for file uploads *** --}}
             @csrf {{-- CSRF token for security --}}
 
             {{-- Hidden input to pass tenant ID --}}
@@ -129,16 +129,6 @@
                 <textarea id="body" name="body">{{ old('body') }}</textarea>
                  @error('body') <span class="error">{{ $message }}</span> @enderror
             </div>
-
-             {{-- *** Add File Input for Attachments *** --}}
-             <div class="form-group">
-                 <label for="attachments">Attachments (Optional):</label>
-                 {{-- Use name="attachments[]" and multiple attribute for multiple files --}}
-                 <input type="file" id="attachments" name="attachments[]" multiple>
-                 @error('attachments') <span class="error">{{ $message }}</span> @enderror
-                 {{-- If allowing only one file, remove the [] from name and the multiple attribute --}}
-             </div>
-             {{-- *** End File Input *** --}}
 
 
             {{-- Submit Button --}}
